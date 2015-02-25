@@ -1,0 +1,15 @@
+# Git Ignore files
+
+# IntelliJ files
+.idea/
+*.iml
+out/
+
+# Object files and output binaries
+target/
+*.class
+*.jar
+
+# OSX nonsense
+.DS*
+
