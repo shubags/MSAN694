@@ -19,16 +19,7 @@ __author__ = 'marco'
 
 import multiprocessing as mp
 import os
-import thread
 import time
-
-# example with shared memory - avoid
-
-# example with queue - each process sleeps 1 sec, main proc polls q to check if majority report
-# leak assume controller much faster
-
-# then use with 'infinite loop' and trigger leak: use a 'sleeper' thread that triggers leak,
-# pass in the Sensors and randomly trigger a bunch of them
 
 
 def producer(q, delay=0.500):
@@ -43,6 +34,7 @@ def producer(q, delay=0.500):
     for x in sensor.get():
         q.put(x)
         time.sleep(delay)
+
 
 def consumer(q, threshold=5):
     """ Reads values from the queue and raises an alarm if more than ```threshold``` consecutive values are True
@@ -64,11 +56,10 @@ def consumer(q, threshold=5):
 
 def main():
     pool = []
-    monitor = None
     q = mp.Queue()
     monitor = mp.Process(target=consumer, name="Monitor", args=(q, 2))
     monitor.start()
-    for i in range(5):
+    for i in range(10):
         proc_name = 'Proc-{}'.format(i)
         p = mp.Process(target=producer, name=proc_name, args=(q,))
         p.start()
@@ -77,7 +68,7 @@ def main():
     monitor.join()
     for p in pool:
         p.terminate()
-    print("[main] finished".format(os.getpid()))
+    print("[main: {}] finished".format(os.getpid()))
 
 
 if __name__ == "__main__":
