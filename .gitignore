@@ -9,6 +9,7 @@ out/
 target/
 *.class
 *.jar
+*.pyc
 
 # OSX nonsense
 .DS*

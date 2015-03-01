@@ -13,15 +13,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 
 __author__ = 'marco'
 
 import mock
 import unittest
 
-import sensors
+from sensors import Sensor
+
+
+FORMAT = '%(asctime)-15s %(message)s'
 
 
 class SensorsTest(unittest.TestCase):
 
-    @mock
+    @classmethod
+    def setUpClass(cls):
+        logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+
+    def setUp(self):
+        self.sensor = Sensor(faulty_pct=0.01)
+
+    def test_sensor(self):
+        self.assertFalse(self.sensor.get().next())
+        self.sensor._detect_leak()
+        self.assertTrue(self.sensor.get().next())
+
+    def test_faulty_sensor(self):
+        fs = Sensor(faulty_pct=99.99)
+        self.assertTrue(fs.get().next())
+
+    def test_faulty_50pct(self):
+        fs = Sensor(faulty_pct=55.0)
+        self.assertTrue(fs.get().next() or fs.get().next())
+
+    def test_can_get_a_lot(self):
+        for _ in xrange(100000):
+            self.sensor.get().next()

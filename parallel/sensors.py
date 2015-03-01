@@ -38,8 +38,7 @@ class Sensor(object):
         if not (0 < faulty_pct < 100):
             faulty_pct = 1.0
         self._range = int(100.0 / faulty_pct)
-        logging.debug("Created sensor with an expected failure rate of {}%".format(
-            100.0 / self._range))
+        logging.debug("Created sensor with an expected failure rate of {}%".format(faulty_pct))
 
     def _detect_leak(self):
         """ A radioactive leak will trigger this method """
