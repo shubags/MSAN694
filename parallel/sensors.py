@@ -20,49 +20,47 @@ __author__ = 'marco'
 import argparse
 import logging
 import random
+import time
 
 
 class Sensor(object):
 
-    #: when the sensor detects radioactivity it will emit this value
-    BROKEN_VALUE = -1
+    def __init__(self, faulty_pct=1.0):
+        """A sensor that detects whether a leak occurred.
 
-    def __init__(self):
-        """ The dumbest sensor on Earth - returns a random value, or a ```fixed``` value.
+        This is cheap stuff: ```faulty_pct```% of the time it will give the wrong output.
 
-        With a 50% chance (if ```fair``` is ```True```), its generator method with yield a random
-        value, or a ```fixed``` value; the default fixed value is ```DOM_VALUE```
-
-        :param fixed: the fixed value to return, randomly, one half of the time
-        :type fixed: int
-        :param fair: if ```True``` it will return ```fixed``` about 50% of the time; otherwise it
-                     will return ```fixed``` much more often
+        :param faulty_pct: the % of times the sensor emits the wrong reading, must be between 0
+        and 100 (exclusive)
+        :type faulty_pct: float
         """
         self._alarm = False
-        self._range = 100
+        if not (0 < faulty_pct < 100):
+            faulty_pct = 1.0
+        self._range = int(100.0 / faulty_pct)
+        logging.debug("Created sensor with an expected failure rate of {}%".format(
+            100.0 / self._range))
 
     def _detect_leak(self):
-        """ A radioactive leak will trigger this method
-        """
+        """ A radioactive leak will trigger this method """
         self._alarm = True
 
     def _reset(self):
-        """ And we can manually reset the sensor, in case want to avoid bad press
-        """
+        """ And we can manually reset the sensor, in case want to avoid bad press """
         self._alarm = False
 
     def get(self):
         """ Generator method for the sensor, returns an infinite stream of sensor readings
 
         :return: this is a generator method, yields the random value
-        :rtype: Iterator
+        :rtype: iterator
         """
         while True:
-            # Around 10% of the time this sensor will misreport its readings - because top
+            # A fair amount of the time this sensor will misreport its readings - because top
             # management wanted to save money and, obviously, the radioactivity detectors seemed
             # the most reasonable place where to go cheapo
-            coin = random.randint(0, 10)
-            sensor_value = self._alarm if coin is not 0 else not self._alarm
+            coin = random.randint(0, self._range)
+            sensor_value = self._alarm if coin != 0 else not self._alarm
             yield sensor_value
 
 
@@ -72,11 +70,14 @@ def iterate_forever():
     for x in sensor.get():
         if x:
             logging.error(">>>>>>> R U N !!!!! <<<<<")
-            break
+            # now reset the sensor
+            sensor._reset()
+        else:
+            logging.debug("Sample: %d -- all systems are normal", ticks)
         ticks += 1
-        if ticks == 100:
+        if ticks & 100 == 0:
             sensor._detect_leak()
-        logging.debug("Sample: %d -- all systems are normal", ticks)
+        time.sleep(1)
 
 
 def get_n_samples(sensor, num):
@@ -98,7 +99,7 @@ def get_n_samples(sensor, num):
     return samples
 
 
-def should_run(sensors=3, samples=1000):
+def should_run(sensors=3, samples=1000, faulty=1.0):
     """ Finds out if we had a radioactive leak
 
     We define a leak if more than half the sensors return an alarm, for more than three
@@ -110,7 +111,7 @@ def should_run(sensors=3, samples=1000):
     :rtype: bool
     """
     num = sensors
-    sensors = [Sensor() for _ in range(0, num)]
+    sensors = [Sensor(faulty_pct=faulty) for _ in range(0, num)]
     samples = [get_n_samples(s, num=samples) for s in sensors]
     tot_count = len(samples[0])
     for x in xrange(0, tot_count):
@@ -118,9 +119,10 @@ def should_run(sensors=3, samples=1000):
         for i in range(num):
             if samples[i][x]:
                 count += 1
-        if count > num / 2:
+        if count > 0:
             logging.error("At sample %d, %s sensors were in the ALARM state", x, count)
-            break
+            if count > num / 2:
+                break
     # Just because I wanted to show the use of for/else - a very Pythonic pattern!
     else:
         return False
@@ -133,6 +135,7 @@ def parse_args():
                         help="Number of sensors to activate")
     parser.add_argument('--samples', required=False, default=100, type=int,
                         help="Number of samples per sensor")
+    parser.add_argument('--faulty-pct', default=5, help="The % failure rate of sensors", type=float)
     parser.add_argument('--test', default=False, help="Is this a test run?", type=bool)
     return parser.parse_args()
 
@@ -140,7 +143,9 @@ def parse_args():
 def main():
     conf = parse_args()
     if not conf.test:
-        print("You should {}run".format("" if should_run(sensors=conf.sensors, samples=conf.samples)
+        print("You should {}run".format("" if should_run(sensors=conf.sensors,
+                                                         samples=conf.samples,
+                                                         faulty=conf.faulty_pct)
                                         else "not "))
     else:
         iterate_forever()
