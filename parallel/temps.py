@@ -1,15 +1,21 @@
 __author__ = 'marco'
 
 import os
-import sys
 import time
 
 
 def profile(func):
-    """
+    """Profiles a function, printing out the time it takes to execute
 
-    :param func:
-    :return:
+        Use as a decorator::
+
+            @profile
+            def my_func(x, y):
+                # do something that takes time
+                pass
+
+    :param func: the function to execute
+    :return: a wrapper function
     """
     def wrapper(*args, **kwargs):
         start = time.time()
@@ -24,7 +30,10 @@ def profile(func):
         return r
     return wrapper
 
+
+# FIXME: don't do this; use a CLI argument instead
 SENSOR_DATA_FILE = '../hadoop/sensors/data/temperature.log.csv'
+
 
 def get_cwd():
     """ Find the current, absolute path that this script is being executed from
@@ -90,7 +99,10 @@ def main():
     data_file = os.path.join(get_cwd(), SENSOR_DATA_FILE)
     data_points = read_records(data_file)
     print("There are {} data records".format(len(data_points)))
-    print("The highest temperature was {res[0]} at {res[1]}% average CPU load".format(res=calc_max_cpu(data_points)))
+    temp, cpu_values = calc_max_cpu(data_points)
+    avg = reduce(lambda acc, x: acc + x, cpu_values) / len(cpu_values)
+    print("The highest temperature was {temp}C at {avg}% average CPU load".format(temp=temp, avg=avg))
+
 
 if __name__ == '__main__':
     main()

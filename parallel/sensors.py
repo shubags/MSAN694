@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__author__ = 'marco'
+from __future__ import print_function
 
+__author__ = 'marco'
 
 import argparse
 import logging
@@ -31,7 +32,7 @@ class Sensor(object):
         This is cheap stuff: ```faulty_pct```% of the time it will give the wrong output.
 
         :param faulty_pct: the % of times the sensor emits the wrong reading, must be between 0
-        and 100 (exclusive)
+                           and 100 (exclusive)
         :type faulty_pct: float
         """
         self._alarm = False
