@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Demonstrates the use of multi-processing for infinite streams of data.
+
+Many producers (``Sensor`` objects) will generate an infinite stream of data that will be
+queued for a single consumer to analyze and take action on.
+"""
+
+from __future__ import print_function
+
+
 __author__ = 'marco'
 
 
@@ -30,15 +40,15 @@ pid_file_lock = mp.Lock()
 console_lock = mp.Lock()
 
 
-def log(s):
+def log(msg):
     with console_lock:
-        print(s)
+        print(msg)
 
 
-def producer(q, delay=0.500):
+def producer(queue, delay=0.500):
     """ It will forever put the sensor's readings onto the queue
 
-    :param q: the queue to push sensor data to
+    :param queue: the queue to push sensor data to
     :param delay: between readings
     :return: None
     """
@@ -47,21 +57,23 @@ def producer(q, delay=0.500):
             pid.write('{}\n'.format(os.getpid()))
     log("[{}] producer started".format(os.getpid()))
     sensor = Sensor(faulty_pct=30.0)
-    for x in sensor.get():
-        q.put(x)
+    for value in sensor.get():
+        queue.put(value)
         time.sleep(delay)
 
 
-def consumer(q, threshold=5):
-    """ Reads values from the queue and raises an alarm if more than ```threshold``` consecutive values are True
+def consumer(queue, threshold=5):
+    """ Reads values from the queue and raises an alarm
 
-    :param q: the queue to read from
+    More than ```threshold``` consecutive values that are True will trigger an alarm.
+
+    :param queue: the queue to read from
     :return: never, unless the threshold is exceeded
     """
     log("[monitor: {}] Started with threshold {}".format(os.getpid(), threshold))
     count = 0
     while count < threshold:
-        reading = q.get(block=True)
+        reading = queue.get(block=True)
         if reading:
             count += 1
             log('Alerting: {}'.format(count))
@@ -71,21 +83,22 @@ def consumer(q, threshold=5):
     log("[monitor] Threshold exceeded - exiting")
 
 
-def main(conf):
+def main(config):
     # TODO: poor man's MP pool - use multiprocessing.Pool in real production code
     pool = []
-    q = mp.Queue()
-    monitor = mp.Process(target=consumer, name="Monitor", args=(q, conf.threshold))
+    queue = mp.Queue()
+    monitor = mp.Process(target=consumer, name="Monitor", args=(queue, config.threshold))
     monitor.start()
-    for i in range(conf.sensors):
+    for i in range(config.sensors):
         proc_name = 'Proc-{}'.format(i)
-        p = mp.Process(target=producer, name=proc_name, args=(q,))
-        p.start()
-        pool.append(p)
-    log("[main: {}] waiting for monitor to complete (when threshold is exceeded)".format(os.getpid()))
+        process = mp.Process(target=producer, name=proc_name, args=(queue,))
+        process.start()
+        pool.append(process)
+    log("[main: {}] waiting for monitor to complete (when threshold is exceeded)"
+        .format(os.getpid()))
     monitor.join()
-    for p in pool:
-        p.terminate()
+    for process in pool:
+        process.terminate()
     with pid_file_lock:
         os.remove(pid_file)
     log("[main: {}] finished".format(os.getpid()))
@@ -101,5 +114,5 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    conf = parse_args()
-    main(conf)
+    config = parse_args()
+    main(config)

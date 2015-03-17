@@ -28,3 +28,4 @@ with open(FILE_NAME, 'r') as src:
             print('.', end="")
             for _ in xrange(random.randint(100, SKIP)):
                 src.readline()
+print("Finished")
