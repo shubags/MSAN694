@@ -20,7 +20,7 @@ public class SensorsTemp {
         if (args.length != 2) {
             System.err.println("Usage: hadoop jar sensors.jar <in.csv> <output dir>");
             System.err.println(String.format("Invalid arguments passed: %s", stringify(args)));
-            System.exit(2);
+            System.exit(1);
         }
         JobConf conf = new JobConf(SensorsTemp.class);
         conf.setJobName("SensorsTemp");
