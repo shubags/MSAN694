@@ -15,4 +15,5 @@ for line in csv.reader(sys.stdin):
             print '{mfg}\t{amt}'.format(mfg=mfg, amt=amt_usd)
     except:
         # just skip this line
+        # FIXME: in real production code, you would keep track of errors/malformed input
         pass
