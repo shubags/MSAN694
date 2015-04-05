@@ -17,3 +17,6 @@ target/
 # Data files should not be kept under source control
 *.csv
 
+# IPython notebook checkpoints
+.ipynb_checkpoints/
+
